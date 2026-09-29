@@ -18,7 +18,7 @@ import sys
 import cv2
 import numpy as np
  
-SIZE = 28          # final image side; try 16, 20, 28, 32
+SIZE = 64          # final image side; try 16, 20, 28, 32
 WORK_SIDE = 800    # photos are shrunk to this longest side first (speed + consistent kernels)
 BG_KERNEL = 41     # must be clearly wider than a marker stroke at WORK_SIDE resolution
 PAD = 0.12         # margin around the shape's bounding box (fraction of box size)

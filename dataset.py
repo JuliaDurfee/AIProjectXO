@@ -167,12 +167,11 @@ AUGMENT = v2.Compose([
     ),
 
     v2.ElasticTransform(
-        alpha=12.0,
-        sigma=3.0
-    ),
-
-    RandomStroke(),
+        alpha=25.0, sigma=6.0),
+        RandomStroke(), 
 ])
+# In RandomStroke, the 3 in both max_pool2d(..., 3, 1, 1) calls can become 5, 1, 2, so the 
+# thicker and thinner stroke effects stay about the same size relative to the image
 
 
 class XODataset(Dataset):
