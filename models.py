@@ -28,6 +28,7 @@ class CNN(nn.Module):
             *block(1, 16), nn.MaxPool2d(2),
             *block(16, 32), nn.MaxPool2d(2),
             *block(32, 64),
+            *block(64, 64),
             nn.AdaptiveAvgPool2d(1),
         )
         self.head = nn.Sequential(nn.Flatten(), nn.Dropout(dropout), nn.Linear(64, 2))
