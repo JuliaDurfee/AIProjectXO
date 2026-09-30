@@ -19,23 +19,37 @@ class MLP(nn.Module):
  
  
 class CNN(nn.Module):
-    """Classifier 3: small convolutional net. 64x64"""
-    def __init__(self, dropout=0.3):
+    """Classifier 3: small convolutional neural network."""
+
+    def __init__(self, size=SIZE, dropout=0.3):
         super().__init__()
-        def block(cin, cout):
-            return [nn.Conv2d(cin, cout, 3, padding=1), nn.BatchNorm2d(cout), nn.ReLU()]
+
         self.features = nn.Sequential(
-            *block(1, 16), nn.MaxPool2d(2),
-            *block(16, 32), nn.MaxPool2d(2),
-            *block(32, 64),
-            *block(64, 64),
-            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(1, 16, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.ReLU()
         )
-        self.head = nn.Sequential(nn.Flatten(), nn.Dropout(dropout), nn.Linear(64, 2))
- 
+
+        reduced_size = size // 4
+
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(64 * reduced_size * reduced_size, 128),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(128, 2)
+        )
+
     def forward(self, x):
-        return self.head(self.features(x))
- 
+        x = self.features(x)
+        return self.classifier(x)
  
 def build(name):
     return {"mlp": MLP, "cnn": CNN}[name]()
