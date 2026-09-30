@@ -19,7 +19,7 @@ class MLP(nn.Module):
  
  
 class CNN(nn.Module):
-    """Classifier 3: small convolutional net. 28x28 -> 14 -> 7 -> global average pool."""
+    """Classifier 3: small convolutional net. 64x64"""
     def __init__(self, dropout=0.3):
         super().__init__()
         def block(cin, cout):

@@ -80,7 +80,7 @@ def test_neural_model(model_name, X, y, paths, device):
         for img, label, path in zip(X, y, paths):
             x = torch.from_numpy(img).float()
 
-            # [28, 28] -> [1, 1, 28, 28]
+            # [64, 64] -> [1, 1, 64, 64]
             x = x.unsqueeze(0).unsqueeze(0).to(device)
 
             outputs = model(x)
