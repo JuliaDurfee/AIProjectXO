@@ -1,0 +1,3 @@
+[submodule "model-playground"]
+	path = model-playground
+	url = https://github.com/supertweety/model-playground.git
