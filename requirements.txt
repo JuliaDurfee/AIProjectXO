@@ -4,5 +4,3 @@ opencv-python
 numpy
 pillow
 matplotlib
-numpy
-opencv-python

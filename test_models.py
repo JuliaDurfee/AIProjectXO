@@ -66,7 +66,7 @@ def test_neural_model(model_name, X, y, paths, device):
 
     model.load_state_dict(
         torch.load(
-            f"models/{model_name}.pt",
+            f"models/{model_name}_final.pt",
             map_location=device
         )
     )
