@@ -32,7 +32,7 @@ class CNN(nn.Module):
         def block(cin, cout):
             return [
                 nn.Conv2d(cin, cout, 3, padding=1),
-                nn.GroupNorm(8, cout),   # 16, 32, 64 channels all divisible by 8
+                nn.GroupNorm(8, cout, eps=1e-3),   
                 nn.ReLU()
             ]
 

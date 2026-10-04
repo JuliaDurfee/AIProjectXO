@@ -6,7 +6,7 @@ Expected layout:
     data/X/*.jpg
 
 Every photo goes through the SAME path as in Model Playground:
-    playground input (whole photo -> 64x64 gray, -1..1) -> darkness (0 white .. 1 black)
+    playground input (whole photo -> 64x64 gray, -1..1) -> ContractToInk -> 64x64 ink map
 (see playground.py). Results are cached in data/cache_playground.npz.
 Delete that file after adding/removing photos or changing playground.py.
 """
@@ -21,7 +21,7 @@ from torch.utils.data import Dataset
 from torchvision.transforms import v2
 
 # Training images go through the SAME path as the playground: browser 64x64 gray -> darkness.
-from playground import SIZE, darkness_from_file as preprocess
+from playground import SIZE, ink_from_file as preprocess
 
 CLASSES = ["O", "X"]          # label 0 = O, label 1 = X
 

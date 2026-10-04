@@ -16,12 +16,18 @@ classifier sees exactly the same kind of input in training and in the playground
 Steps inside ContractToInk (64x64 versions of the ideas in preprocess.py):
   1. brightness b in [0,1]
   2. board background = morphological closing of b (max-pool then min-pool, k=11):
-     removes the thin dark strokes, keeps shadows and lighting gradients
+     removes the thin dark strokes, keeps shadows and lighting gradients.
+     Capped at the image's average brightness + 0.06, so bright ceiling-light
+     reflections cannot make the board around them look like ink.
   3. ink = how much darker than the local board a pixel is, relative to board brightness
      (lighting invariant; marker colour only matters through its grayscale darkness)
-  4. divide by the image's own max ink, soft threshold (0 below 0.3, 1 above 0.7)
-  5. fade out the outer 3 pixels (fragments of neighbouring shapes at the crop edge)
-  6. crop to the bounding box of the ink (+12% margin) and stretch back to 64x64,
+  4. thicken by 1 px (3x3 max-pool): joins thin strokes that the browser's 64x64
+     sampling of a large photo breaks into dots
+  5. divide by the average of the 64 strongest ink pixels (not the single max, so one
+     heavy dot where the pen stopped cannot make the rest of the stroke look faint),
+     then soft threshold (0 below 0.3, 1 above 0.7)
+  6. fade out the outer 3 pixels (fragments of neighbouring shapes at the crop edge)
+  7. crop to the bounding box of the ink (+12% margin) and stretch back to 64x64,
      done with two 64x64 interpolation matrices (Ry @ img @ Rx^T), then thicken by 1 px
 """
 import sys
@@ -47,9 +53,10 @@ def contract_tensor(path):
 
 
 class ContractToInk(nn.Module):
-    def __init__(self, bg_kernel=11, low=0.3, high=0.7, border=3, pad=0.12):
+    def __init__(self, bg_kernel=11, low=0.3, high=0.7, border=3, pad=0.12, cap=0.06, top_k=64):
         super().__init__()
         self.k, self.low, self.high, self.pad = bg_kernel, low, high, pad
+        self.cap, self.top_k = cap, top_k
         idx = torch.arange(SIZE, dtype=torch.float32)
         edge = torch.minimum(idx, SIZE - 1 - idx)
         w = torch.clamp(edge / border, 0, 1)
@@ -78,8 +85,11 @@ class ContractToInk(nn.Module):
     def forward(self, x):                                              # x: [B,1,64,64] in [-1,1]
         b = (x + 1) / 2
         bg = -self._maxpool(-self._maxpool(b))                         # closing
+        bg = torch.minimum(bg, b.mean(dim=(2, 3), keepdim=True) + self.cap)   # ignore reflections
         ink = torch.relu(bg - b) / (bg + 0.05)
-        ink = ink / (ink.amax(dim=(2, 3), keepdim=True) + 1e-3)
+        ink = F.max_pool2d(ink, 3, stride=1, padding=1)               # join dotted strokes
+        ref = ink.flatten(1).topk(self.top_k, dim=1).values.mean(dim=1)  # [B]
+        ink = ink / (ref.view(-1, 1, 1, 1) + 1e-3)
         m = torch.clamp((ink - self.low) / (self.high - self.low), 0, 1) * self.border
 
         hard = (m > 0.5).to(m.dtype)
