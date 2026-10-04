@@ -3,7 +3,7 @@ import glob
 import numpy as np
 import torch
 
-from preprocess import preprocess
+from playground import ink_from_file as preprocess
 from perceptron import predict as perceptron_predict
 from models import build
 

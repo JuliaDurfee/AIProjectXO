@@ -10,8 +10,7 @@ import torch
 import perceptron
 from dataset import CLASSES
 from models import build
-from preprocess import preprocess
- 
+from playground import ink_from_file as preprocess 
  
 def load(name):
     m = build(name)
