@@ -5,8 +5,10 @@ Expected layout:
     data/O/*.jpg
     data/X/*.jpg
 
-All photos are preprocessed once and cached in data/cache.npz.
-Delete that file after adding photos or changing preprocess.py.
+Every photo goes through the SAME path as in Model Playground:
+    playground input (whole photo -> 64x64 gray, -1..1) -> darkness (0 white .. 1 black)
+(see playground.py). Results are cached in data/cache_playground.npz.
+Delete that file after adding/removing photos or changing playground.py.
 """
 
 import glob
@@ -18,14 +20,15 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset
 from torchvision.transforms import v2
 
-from preprocess import SIZE, preprocess
+# Training images go through the SAME path as the playground: browser 64x64 gray -> darkness.
+from playground import SIZE, darkness_from_file as preprocess
 
 CLASSES = ["O", "X"]          # label 0 = O, label 1 = X
 
 # IMPORTANT: your actual folders are data/O and data/X
 RAW_DIR = "data"
 
-CACHE = "data/cache.npz"
+CACHE = "data/cache_playground.npz"   # separate from the old preprocess.py cache
 
 
 def load_cached(raw_dir=RAW_DIR, cache=CACHE):
@@ -80,34 +83,40 @@ def group_split(y, paths, val_frac=0.2, seed=42):
     """
     Split by source photo so crops from the same original photo
     cannot appear in both training and validation.
+
+    Consecutive source photos overlap (same board photographed twice),
+    so the same drawing can appear in both. Each overlapping set is
+    treated as ONE group so both copies always land on the same side.
     """
 
     import re
 
     rng = np.random.default_rng(seed)
 
-    # extract source ID from filenames like:
-    # crop_0123_src04.jpg
+    SAME_BOARD = {"07": "06", "09": "08", "10": "08",
+                  "12": "11", "13": "11", "15": "14", "17": "16"}
+
+    # extract source ID from filenames like crop_0123_src04.jpg,
+    # then map overlapping photos to one shared group
     groups = []
 
     for path in paths:
         match = re.search(r"src(\d+)", path)
 
         if match:
-            groups.append(match.group(1))
+            src = match.group(1)
+            groups.append(SAME_BOARD.get(src, src))
         else:
             raise ValueError(f"Could not find source ID in {path}")
 
     groups = np.array(groups)
 
-    unique_groups = np.unique(groups)
-
-    # shuffle whole source photos
-    unique_groups = rng.permutation(unique_groups)
+    # shuffle whole groups
+    unique_groups = rng.permutation(np.unique(groups))
 
     n_val_groups = max(
         1,
-        int(len(unique_groups) * val_frac)
+        int(round(len(unique_groups) * val_frac))
     )
 
     val_groups = set(unique_groups[:n_val_groups])
@@ -125,6 +134,7 @@ def group_split(y, paths, val_frac=0.2, seed=42):
         np.array(train_indices),
         np.array(val_indices)
     )
+
 
 class RandomStroke:
     """

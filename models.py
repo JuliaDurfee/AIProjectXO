@@ -1,8 +1,8 @@
 import torch.nn as nn
- 
+
 from preprocess import SIZE
- 
- 
+
+
 class MLP(nn.Module):
     """Classifier 2: flatten the image, fully connected layers only."""
     def __init__(self, size=SIZE, hidden=(256, 64), dropout=0.3):
@@ -13,13 +13,18 @@ class MLP(nn.Module):
             d = h
         layers.append(nn.Linear(d, 2))              # 2 logits: O, X
         self.net = nn.Sequential(*layers)
- 
+
     def forward(self, x):
         return self.net(x)
- 
- 
+
+
 class CNN(nn.Module):
-    """Classifier 3: small convolutional net. 64x64"""
+    """Classifier 3: small convolutional net on 64x64 ink maps.
+
+    GroupNorm instead of BatchNorm: it normalises each image on its own,
+    so it behaves the same in training and evaluation and does not depend
+    on running batch statistics (which were unstable on our small dataset).
+    """
 
     def __init__(self, dropout=0.3):
         super().__init__()
@@ -27,7 +32,7 @@ class CNN(nn.Module):
         def block(cin, cout):
             return [
                 nn.Conv2d(cin, cout, 3, padding=1),
-                nn.BatchNorm2d(cout),
+                nn.GroupNorm(8, cout),   # 16, 32, 64 channels all divisible by 8
                 nn.ReLU()
             ]
 
@@ -54,7 +59,7 @@ class CNN(nn.Module):
     def forward(self, x):
         x = self.features(x)
         return self.head(x)
-    
-    
+
+
 def build(name):
     return {"mlp": MLP, "cnn": CNN}[name]()
