@@ -7,8 +7,16 @@ Expected layout:
 
 Every photo goes through the SAME path as in Model Playground:
     playground input (whole photo -> 64x64 gray, -1..1) -> ContractToInk -> 64x64 ink map
-(see playground.py). Results are cached in data/cache_playground.npz.
-Delete that file after adding/removing photos or changing playground.py.
+(see playground.py).
+
+Photo-level augmentation: besides the original, AUG_VARIANTS randomly altered versions of
+every photo (lighting, marker colour/fading, loose crop, full-res thin strokes, glare, blur,
+noise - see photo_aug.random_photo_aug) are made BEFORE ink extraction, so the networks also
+learn from messy ink maps like real classroom photos produce. All versions of a photo keep
+the photo's path, so group_split keeps them on the same side of the train/validation split.
+
+Results are cached in data/cache_playground_aug.npz (takes a few minutes the first time).
+Delete that file after adding/removing photos or changing playground.py / photo_aug.py.
 """
 
 import glob
@@ -20,15 +28,19 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset
 from torchvision.transforms import v2
 
-# Training images go through the SAME path as the playground: browser 64x64 gray -> darkness.
-from playground import SIZE, ink_from_file as preprocess
+# Training images go through the SAME path as the playground: browser 64x64 gray -> ContractToInk.
+from photo_aug import random_photo_aug
+from playground import SIZE, ink_from_image, load_image
 
 CLASSES = ["O", "X"]          # label 0 = O, label 1 = X
 
 # IMPORTANT: your actual folders are data/O and data/X
 RAW_DIR = "data"
 
-CACHE = "data/cache_playground.npz"   # separate from the old preprocess.py cache
+CACHE = "data/cache_playground_aug.npz"
+
+AUG_VARIANTS = 5      # extra randomly altered versions per photo (0 = originals only)
+AUG_SEED = 1234
 
 
 def load_cached(raw_dir=RAW_DIR, cache=CACHE):
@@ -40,21 +52,27 @@ def load_cached(raw_dir=RAW_DIR, cache=CACHE):
     y = []
     paths = []
 
+    rng = np.random.default_rng(AUG_SEED)
+
     for label, name in enumerate(CLASSES):
         folder = os.path.join(raw_dir, name)
+        files = [p for p in sorted(glob.glob(os.path.join(folder, "*")))
+                 if p.lower().endswith((".jpg", ".jpeg", ".png", ".heic"))]
 
-        print(f"Loading class {name} from {folder}")
+        print(f"Loading class {name} from {folder}: {len(files)} photos "
+              f"x {1 + AUG_VARIANTS} versions")
 
-        for p in sorted(glob.glob(os.path.join(folder, "*"))):
-            img = preprocess(p)
+        for k, p in enumerate(files):
+            photo = load_image(p).convert("RGB")
+            versions = [photo] + [random_photo_aug(photo, rng) for _ in range(AUG_VARIANTS)]
 
-            if img is None:
-                print("skipped (no ink found):", p)
-                continue
+            for v in versions:
+                X.append(ink_from_image(v))
+                y.append(label)
+                paths.append(p)        # same path -> same group in group_split
 
-            X.append(img)
-            y.append(label)
-            paths.append(p)
+            if (k + 1) % 50 == 0:
+                print(f"  {k + 1}/{len(files)}")
 
     if len(X) == 0:
         raise RuntimeError(
@@ -72,7 +90,7 @@ def load_cached(raw_dir=RAW_DIR, cache=CACHE):
     )
 
     print(
-        f"cached {len(y)} images "
+        f"cached {len(y)} ink maps from {len(set(paths))} photos "
         f"({(y == 0).sum()} O, {(y == 1).sum()} X)"
     )
 

@@ -1,7 +1,7 @@
 """
 Check all three classifiers the way the playground will run them, then export .onnx files.
 
-    python export_playground.py
+    command: python export_playground.py
 
 1. Loads test_data/O and test_data/X through the playground's exact input format
    (whole image -> 64x64 gray in [-1,1]) and prints each model's accuracy.

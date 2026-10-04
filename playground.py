@@ -105,11 +105,15 @@ _TO_INK = ContractToInk().eval()
 
 
 @torch.no_grad()
-def ink_from_file(path):
-    """Photo file -> 64x64 float32 numpy ink map, via the browser's input format.
-    Drop-in replacement for preprocess.preprocess() in dataset.py."""
-    x = contract_tensor(path).unsqueeze(0)
+def ink_from_image(image):
+    """PIL image -> 64x64 float32 numpy ink map, via the browser's input format."""
+    x = contract_preprocess(image).unsqueeze(0)
     return _TO_INK(x)[0, 0].numpy().astype(np.float32)
+
+
+def ink_from_file(path):
+    """Photo file -> 64x64 float32 numpy ink map, via the browser's input format."""
+    return ink_from_image(load_image(str(path)))
 
 
 class PlaygroundModel(nn.Module):
