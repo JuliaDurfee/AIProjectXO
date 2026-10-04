@@ -21,9 +21,9 @@ class MLP(nn.Module):
 class CNN(nn.Module):
     """Classifier 3: small convolutional net on 64x64 ink maps.
 
-    GroupNorm instead of BatchNorm: it normalises each image on its own,
-    so it behaves the same in training and evaluation and does not depend
-    on running batch statistics (which were unstable on our small dataset).
+    GroupNorm normalises each image on its own, so it behaves the same in 
+    training and evaluation and does not depend on running batch statistics 
+    (which were unstable on our small dataset).
     """
 
     def __init__(self, dropout=0.3):

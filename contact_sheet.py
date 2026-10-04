@@ -2,7 +2,7 @@
 Contact sheets: every image in a folder on a few grid pages, so you can review
 the whole dataset at a glance.
 
-Each tile shows the photo (left), the 28x28 ink map the models see (right),
+Each tile shows the photo (left), the 64x64 ink map the models see (right),
 the file name and the perceptron score. Red border = perceptron gets it wrong,
 orange = preprocessing found no ink.
 
